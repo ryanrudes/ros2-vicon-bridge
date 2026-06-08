@@ -67,15 +67,16 @@ target_link_libraries(vicon_test_fps vicon_sdk)
 # ROS EXECUTABLE #
 ##################
 
-add_executable(vicon_bridge src/vicon_bridge.cpp)
-ament_target_dependencies(vicon_bridge
+add_executable(vicon_bridge_node src/vicon_bridge.cpp)
+ament_target_dependencies(vicon_bridge_node
 	rclcpp
 	tf2
 	tf2_ros
 	geometry_msgs
   diagnostic_updater
 )
-target_link_libraries(vicon_bridge vicon_sdk ${Boost_LIBRARIES})
+target_link_libraries(vicon_bridge_node vicon_sdk ${Boost_LIBRARIES})
+set_target_properties(vicon_bridge_node PROPERTIES OUTPUT_NAME vicon_bridge)
 
 add_executable(vicon_bridge_retiming src/vicon_bridge_retiming.cpp)
 ament_target_dependencies(vicon_bridge_retiming
@@ -87,7 +88,7 @@ ament_target_dependencies(vicon_bridge_retiming
 target_link_libraries(vicon_bridge_retiming vicon_sdk ${Boost_LIBRARIES})
 
 install(TARGETS
-	vicon_bridge
+	vicon_bridge_node
        	vicon_bridge_retiming
 	DESTINATION lib/${PROJECT_NAME}
 )
