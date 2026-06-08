@@ -10,6 +10,7 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "vicon_bridge/msg/markers.hpp"
 #include "tf2_ros/transform_broadcaster.h"
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <diagnostic_updater/publisher.hpp>
@@ -55,6 +56,7 @@ private:
   void process_frame(rclcpp::Time &grab_time);
   void process_specific_segment(const rclcpp::Time &frame_time);
   void process_all_segments(const rclcpp::Time &frame_time);
+  void publish_markers(const rclcpp::Time &frame_time);
   geometry_msgs::msg::PoseStamped
   transform2pose(geometry_msgs::msg::TransformStamped &transformMsg);
 
@@ -68,11 +70,14 @@ private:
   std::string target_segment_name_ = "";
   std::string world_frame_id_ = "world";
   std::string tf_namespace_ = "vicon";
+  bool publish_markers_ = true;
+  bool publish_unlabeled_markers_ = true;
 
   // vars
   Client client_;
   rclcpp::TimerBase::SharedPtr timer_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  rclcpp::Publisher<vicon_bridge::msg::Markers>::SharedPtr markers_pub_;
   const rclcpp::Time start_time_;
   std::size_t drop_count_ = 0;
   std::size_t frame_count_ = 0;
