@@ -50,6 +50,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 # Compile ViconSDK from source
 file(GLOB_RECURSE vicon_sdk_files "${CMAKE_CURRENT_SOURCE_DIR}/vicon_sdk/**/**.cpp")
+list(FILTER vicon_sdk_files EXCLUDE REGEX ".*Test.*\\.cpp$")
+list(FILTER vicon_sdk_files EXCLUDE REGEX ".*/Examples/.*")
+list(FILTER vicon_sdk_files EXCLUDE REGEX ".*/example/.*")
 add_library(vicon_sdk ${vicon_sdk_files})
 target_link_libraries(vicon_sdk PUBLIC ${Boost_LIBRARIES})
 
