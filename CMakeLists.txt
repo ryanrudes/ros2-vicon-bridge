@@ -91,7 +91,7 @@ ament_target_dependencies(vicon_bridge_retiming
 target_link_libraries(vicon_bridge_retiming vicon_sdk ${Boost_LIBRARIES})
 
 install(TARGETS
-	vicon_bridge_node_node
+	vicon_bridge_node
        	vicon_bridge_retiming
 	DESTINATION lib/${PROJECT_NAME}
 )
