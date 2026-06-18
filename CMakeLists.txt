@@ -21,11 +21,24 @@ endif()
 
 find_package(Boost REQUIRED COMPONENTS thread date_time chrono)
 find_package(ament_cmake REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(diagnostic_updater REQUIRED)
+
+get_filename_component(_ros_env_root "${ament_cmake_DIR}/../../.." ABSOLUTE)
+set(_vicon_bridge_python "${_ros_env_root}/bin/python3")
+set(Python3_EXECUTABLE "${_vicon_bridge_python}" CACHE FILEPATH "" FORCE)
+set(Python_EXECUTABLE "${_vicon_bridge_python}" CACHE FILEPATH "" FORCE)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/Marker.msg"
+  "msg/Markers.msg"
+  DEPENDENCIES geometry_msgs std_msgs
+)
 
 
 include_directories(
@@ -39,9 +52,10 @@ include_directories(
 # VICON SDK #
 #############
 
-# Compile ViconSDK from source
+# Compile ViconSDK from source (exclude bundled SDK test mains).
 file(GLOB_RECURSE vicon_sdk_files "${CMAKE_CURRENT_SOURCE_DIR}/vicon_sdk/**/**.cpp")
-add_library(vicon_sdk ${vicon_sdk_files})
+list(FILTER vicon_sdk_files EXCLUDE REGEX ".*/ViconDataStreamSDK_.*Test/.*")
+add_library(vicon_sdk STATIC ${vicon_sdk_files})
 target_link_libraries(vicon_sdk PUBLIC ${Boost_LIBRARIES})
 
 
@@ -58,15 +72,30 @@ target_link_libraries(vicon_test_fps vicon_sdk)
 # ROS EXECUTABLE #
 ##################
 
-add_executable(vicon_bridge src/vicon_bridge.cpp)
-ament_target_dependencies(vicon_bridge
+# rcutils exports -latomic for Linux; macOS libc++ already provides atomics.
+if(APPLE)
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/atomic_stub.c" "")
+  add_library(atomic STATIC "${CMAKE_CURRENT_BINARY_DIR}/atomic_stub.c")
+  set_target_properties(atomic PROPERTIES OUTPUT_NAME atomic)
+endif()
+
+add_executable(vicon_bridge_node src/vicon_bridge.cpp)
+set_target_properties(vicon_bridge_node PROPERTIES OUTPUT_NAME vicon_bridge)
+ament_target_dependencies(vicon_bridge_node
 	rclcpp
 	tf2
 	tf2_ros
 	geometry_msgs
   diagnostic_updater
 )
-target_link_libraries(vicon_bridge vicon_sdk ${Boost_LIBRARIES})
+target_link_libraries(vicon_bridge_node vicon_sdk ${Boost_LIBRARIES})
+# link the locally-generated Marker/Markers message typesupport
+rosidl_get_typesupport_target(cpp_typesupport_target
+  ${PROJECT_NAME} rosidl_typesupport_cpp)
+target_link_libraries(vicon_bridge_node "${cpp_typesupport_target}")
+if(APPLE)
+  target_link_directories(vicon_bridge_node PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 
 add_executable(vicon_bridge_retiming src/vicon_bridge_retiming.cpp)
 ament_target_dependencies(vicon_bridge_retiming
@@ -76,9 +105,12 @@ ament_target_dependencies(vicon_bridge_retiming
 	geometry_msgs
 )
 target_link_libraries(vicon_bridge_retiming vicon_sdk ${Boost_LIBRARIES})
+if(APPLE)
+  target_link_directories(vicon_bridge_retiming PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 
 install(TARGETS
-	vicon_bridge
+	vicon_bridge_node
        	vicon_bridge_retiming
 	DESTINATION lib/${PROJECT_NAME}
 )
@@ -91,4 +123,5 @@ install(DIRECTORY
 
 
 
+ament_export_dependencies(rosidl_default_runtime)
 ament_package()
